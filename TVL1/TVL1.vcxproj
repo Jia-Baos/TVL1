@@ -155,18 +155,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\TVL1_Folder\tvl1flow_lib.cpp" />
     <ClCompile Include="bicubic_interpolation.cpp" />
     <ClCompile Include="mask.cpp" />
-    <ClCompile Include="tvl1flow_lib.cpp" />
     <ClCompile Include="zoom.cpp" />
     <ClCompile Include="源.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\TVL1_Folder\tvl1flow_lib.h" />
     <ClInclude Include="bicubic_interpolation.h" />
     <ClInclude Include="flowshow.h" />
     <ClInclude Include="mask.h" />
-    <ClInclude Include="saveopticalflow.h" />
-    <ClInclude Include="tvl1flow_lib.h" />
     <ClInclude Include="zoom.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

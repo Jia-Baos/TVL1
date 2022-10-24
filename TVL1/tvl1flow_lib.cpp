@@ -1,7 +1,9 @@
 ﻿#ifndef TVL1FLOW_LIB_C
 #define TVL1FLOW_LIB_C
 
+#include <cmath>
 #include <iostream>
+#include <opencv2/opencv.hpp>
 
 #include "mask.h"
 #include "zoom.h"
@@ -221,19 +223,22 @@ void Dual_TVL1_optic_flow(
  *
  **/
 static void getminmax(
-	float* min,     // output min
-	float* max,     // output max
-	const float* x, // input array
-	int n           // array size
+	float* min,			// output min
+	float* max,			// output max
+	const cv::Mat x		// input array
 )
 {
-	*min = *max = x[0];
-	for (int i = 1; i < n; i++) {
-		if (x[i] < *min)
-			*min = x[i];
-		if (x[i] > *max)
-			*max = x[i];
-	}
+	float* xData = (float*)x.data;
+
+	*min = *max = *(xData);
+	for (int i = 0; i < x.rows; i++)
+		for (int j = 0; i < x.cols; j++)
+		{
+			if (*(xData + i * x.cols + j) < *min)
+				*min = *(xData + i * x.cols + j);
+			if (*(xData + i * x.cols + j) > *max)
+				*max = *(xData + i * x.cols + j);
+		}
 }
 
 /**
@@ -242,18 +247,24 @@ static void getminmax(
  *
  **/
 void image_normalization(
-	const float* I0,  // input image0
-	const float* I1,  // input image1
-	float* I0n,       // normalized output image0
-	float* I1n,       // normalized output image1
-	int size          // size of the image
+	const cv::Mat I0,	// input image0
+	const cv::Mat I1,	// input image1
+	cv::Mat& I0n,       // normalized output image0
+	cv::Mat& I1n		// normalized output image1
 )
 {
+	I0n = cv::Mat::zeros(I0.size(), CV_32FC1);
+	I1n = cv::Mat::zeros(I0.size(), CV_32FC1);
+	float* I0Data = (float*)I0.data;
+	float* I1Data = (float*)I1.data;
+	float* I0nData = (float*)I0n.data;
+	float* I1nData = (float*)I1n.data;
+
 	float max0, max1, min0, min1;
 
 	// obtain the max and min of each image
-	getminmax(&min0, &max0, I0, size);
-	getminmax(&min1, &max1, I1, size);
+	getminmax(&min0, &max0, I0);
+	getminmax(&min1, &max1, I1);
 
 	// obtain the max and min of both images
 	const float max = (max0 > max1) ? max0 : max1;
@@ -262,19 +273,20 @@ void image_normalization(
 
 	if (den > 0)
 		// normalize both images
-		for (int i = 0; i < size; i++)
-		{
-			I0n[i] = 255.0 * (I0[i] - min) / den;
-			I1n[i] = 255.0 * (I1[i] - min) / den;
-		}
-
+		for (int i = 0; i < I0.rows; i++)
+			for (int j = 0; i < I0.cols; j++)
+			{
+				*(I0nData + i * I0.cols + j) = 255.0 * (*(I0Data + i * I0.cols + j) - min) / den;
+				*(I1nData + i * I0.cols + j) = 255.0 * (*(I1Data + i * I0.cols + j) - min) / den;
+			}
 	else
 		// copy the original images
-		for (int i = 0; i < size; i++)
-		{
-			I0n[i] = I0[i];
-			I1n[i] = I1[i];
-		}
+		for (int i = 0; i < I0.rows; i++)
+			for (int j = 0; i < I0.cols; j++)
+			{
+				*(I0nData + i * I0.cols + j) = *(I0Data + i * I0.cols + j);
+				*(I1nData + i * I0.cols + j) = *(I1Data + i * I0.cols + j);
+			}
 }
 
 
@@ -284,10 +296,10 @@ void image_normalization(
  *
  **/
 void Dual_TVL1_optic_flow_multiscale(
-	float* I0,           // source image
-	float* I1,           // target image
-	float* u1,           // x component of the optical flow
-	float* u2,           // y component of the optical flow
+	const cv::Mat I0,           // source image
+	const cv::Mat I1,           // target image
+	cv::Mat& u1,           // x component of the optical flow
+	cv::Mat& u2,           // y component of the optical flow
 	const int   nxx,     // image width
 	const int   nyy,     // image height
 	const float tau,     // time step
@@ -300,18 +312,9 @@ void Dual_TVL1_optic_flow_multiscale(
 	const bool  verbose  // enable/disable the verbose mode
 )
 {
-	int size = nxx * nyy;
-
 	// allocate memory for the pyramid structure
-	float** I0s = (float**)malloc(nscales * sizeof(float*));
-	float** I1s = (float**)malloc(nscales * sizeof(float*));
-	float** u1s = (float**)malloc(nscales * sizeof(float*));
-	float** u2s = (float**)malloc(nscales * sizeof(float*));
-	int* nx = (int*)malloc(nscales * sizeof(int));
-	int* ny = (int*)malloc(nscales * sizeof(int));
-
-	I0s[0] = (float*)malloc(size * sizeof(float));
-	I1s[0] = (float*)malloc(size * sizeof(float));
+	std::vector<int> nx(nscales), ny(nscales);
+	std::vector<cv::Mat> I0s(nscales), I1s(nscales), u1s(nscales), u2s(nscales);
 
 	u1s[0] = u1;
 	u2s[0] = u2;
@@ -319,7 +322,9 @@ void Dual_TVL1_optic_flow_multiscale(
 	ny[0] = nyy;
 
 	// normalize the images between 0 and 255
-	image_normalization(I0, I1, I0s[0], I1s[0], size);
+	I0s[0] = cv::Mat::zeros(nxx, nyy, CV_32FC1);
+	I1s[0] = cv::Mat::zeros(nxx, nyy, CV_32FC1);
+	image_normalization(I0, I1, I0s[0], I1s[0]);
 
 	// pre-smooth the original images
 	gaussian(I0s[0], nx[0], ny[0], PRESMOOTHING_SIGMA);

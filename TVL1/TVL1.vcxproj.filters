@@ -24,10 +24,10 @@
     <ClCompile Include="mask.cpp">
       <Filter>头文件</Filter>
     </ClCompile>
-    <ClCompile Include="tvl1flow_lib.cpp">
+    <ClCompile Include="zoom.cpp">
       <Filter>头文件</Filter>
     </ClCompile>
-    <ClCompile Include="zoom.cpp">
+    <ClCompile Include="..\..\TVL1_Folder\tvl1flow_lib.cpp">
       <Filter>头文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -41,13 +41,10 @@
     <ClInclude Include="mask.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="tvl1flow_lib.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="flowshow.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="saveopticalflow.h">
+    <ClInclude Include="..\..\TVL1_Folder\tvl1flow_lib.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

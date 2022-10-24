@@ -2,15 +2,17 @@
 #ifndef TVL1FLOW_LIB_H
 #define TVL1FLOW_LIB_H
 
+#include <opencv2/opencv.hpp>
+
 #define MAX_ITERATIONS 300
 #define PRESMOOTHING_SIGMA 0.8
 #define GRAD_IS_ZERO 1E-10
 
 void Dual_TVL1_optic_flow_multiscale(
-	float* I0,           // source image
-	float* I1,           // target image
-	float* u1,           // x component of the optical flow
-	float* u2,           // y component of the optical flow
+	const cv::Mat I0,           // source image
+	const cv::Mat I1,           // target image
+	cv::Mat& u1,           // x component of the optical flow
+	cv::Mat& u2,           // y component of the optical flow
 	const int   nxx,     // image width
 	const int   nyy,     // image height
 	const float tau,     // time step

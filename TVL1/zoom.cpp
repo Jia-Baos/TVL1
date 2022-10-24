@@ -87,7 +87,7 @@ void zoom_in(
 	cv::Mat Is = I.clone();
 
 	// intialize the temp varible of Iout, otherwise the memory maybe malloc wrongly
-	cv::Mat Iout = cv::Mat::zeros(nxx, nyy, CV_32FC1);
+	Iout = cv::Mat::zeros(nxx, nyy, CV_32FC1);
 	float* IoutData = (float*)Iout.data;
 
 	// compute the zoom factor
