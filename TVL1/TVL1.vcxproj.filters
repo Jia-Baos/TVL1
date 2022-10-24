@@ -27,7 +27,7 @@
     <ClCompile Include="zoom.cpp">
       <Filter>头文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\TVL1_Folder\tvl1flow_lib.cpp">
+    <ClCompile Include="tvl1flow_lib.cpp">
       <Filter>头文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -44,7 +44,7 @@
     <ClInclude Include="flowshow.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\TVL1_Folder\tvl1flow_lib.h">
+    <ClInclude Include="tvl1flow_lib.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

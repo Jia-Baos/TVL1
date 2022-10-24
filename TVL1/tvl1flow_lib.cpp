@@ -34,10 +34,10 @@
   *
   **/
 void Dual_TVL1_optic_flow(
-	float* I0,           // source image
-	float* I1,           // target image
-	float* u1,           // x component of the optical flow
-	float* u2,           // y component of the optical flow
+	const cv::Mat I0,           // source image
+	const cv::Mat I1,           // target image
+	cv::Mat& u1,           // x component of the optical flow
+	cv::Mat& u2,           // y component of the optical flow
 	const int   nx,      // image width
 	const int   ny,      // image height
 	const float tau,     // time step
@@ -48,39 +48,56 @@ void Dual_TVL1_optic_flow(
 	const bool  verbose  // enable/disable the verbose mode
 )
 {
-	const int   size = nx * ny;
 	const float l_t = lambda * theta;
 
-	size_t sf = sizeof(float);
-	float* I1x = (float*)malloc(size * sf);
-	float* I1y = (float*)malloc(size * sf);
-	float* I1w = (float*)malloc(size * sf);
-	float* I1wx = (float*)malloc(size * sf);
-	float* I1wy = (float*)malloc(size * sf);
-	float* rho_c = (float*)malloc(size * sf);
-	float* v1 = (float*)malloc(size * sf);
-	float* v2 = (float*)malloc(size * sf);
-	float* p11 = (float*)malloc(size * sf);
-	float* p12 = (float*)malloc(size * sf);
-	float* p21 = (float*)malloc(size * sf);
-	float* p22 = (float*)malloc(size * sf);
-	float* div = (float*)malloc(size * sf);
-	float* grad = (float*)malloc(size * sf);
-	float* div_p1 = (float*)malloc(size * sf);
-	float* div_p2 = (float*)malloc(size * sf);
-	float* u1x = (float*)malloc(size * sf);
-	float* u1y = (float*)malloc(size * sf);
-	float* u2x = (float*)malloc(size * sf);
-	float* u2y = (float*)malloc(size * sf);
+	// initailize the matriex
+	cv::Mat I1x = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat I1y = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat I1w = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat I1wx = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat I1wy = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat rho_c = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat v1 = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat v2 = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat p11 = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat p12 = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat p21 = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat p22 = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat div = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat grad = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat div_p1 = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat div_p2 = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat u1x = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat u1y = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat u2x = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat u2y = cv::Mat::zeros(nx, ny, CV_32FC1);
+
+	float* I0Data = (float*)I0.data;
+	float* u1Data = (float*)u1.data;
+	float* u2Data = (float*)u2.data;
+
+	float* I1xData = (float*)I1x.data;
+	float* I1yData = (float*)I1y.data;
+	float* I1wData = (float*)I1w.data;
+	float* I1wxData = (float*)I1wx.data;
+	float* I1wyData = (float*)I1wy.data;
+	float* rho_cData = (float*)rho_c.data;
+	float* v1Data = (float*)v1.data;
+	float* v2Data = (float*)v2.data;
+	float* p11Data = (float*)p11.data;
+	float* p12Data = (float*)p12.data;
+	float* p21Data = (float*)p21.data;
+	float* p22Data = (float*)p22.data;
+	float* divData = (float*)div.data;
+	float* gradData = (float*)grad.data;
+	float* div_p1Data = (float*)div_p1.data;
+	float* div_p2Data = (float*)div_p2.data;
+	float* u1xData = (float*)u1x.data;
+	float* u1yData = (float*)u1y.data;
+	float* u2xData = (float*)u2x.data;
+	float* u2yData = (float*)u2y.data;
 
 	centered_gradient(I1, I1x, I1y, nx, ny);
-
-	// initialization of p
-	for (int i = 0; i < size; i++)
-	{
-		p11[i] = p12[i] = 0.0;
-		p21[i] = p22[i] = 0.0;
-	}
 
 	for (int warpings = 0; warpings < warps; warpings++)
 	{
@@ -89,19 +106,19 @@ void Dual_TVL1_optic_flow(
 		bicubic_interpolation_warp(I1x, u1, u2, I1wx, nx, ny, true);
 		bicubic_interpolation_warp(I1y, u1, u2, I1wy, nx, ny, true);
 
-#pragma omp parallel for
-		for (int i = 0; i < size; i++)
-		{
-			const float Ix2 = I1wx[i] * I1wx[i];
-			const float Iy2 = I1wy[i] * I1wy[i];
+		for (int i = 0; i < ny; i++)
+			for (int j = 0; j < nx; j++)
+			{
+				const float Ix2 = *(I1wxData + i * nx + j) * *(I1wxData + i * nx + j);
+				const float Iy2 = *(I1wyData + i * nx + j) * *(I1wyData + i * nx + j);
 
-			// store the |Grad(I1)|^2
-			grad[i] = (Ix2 + Iy2);
+				// store the |Grad(I1)|^2
+				*(gradData + i * nx + j) = (Ix2 + Iy2);
 
-			// compute the constant part of the rho function
-			rho_c[i] = (I1w[i] - I1wx[i] * u1[i]
-				- I1wy[i] * u2[i] - I0[i]);
-		}
+				// compute the constant part of the rho function
+				*(rho_cData + i * nx + j) = (*(I1wData + i * nx + j) - *(I1wxData + i * nx + j) * *(u1Data + i * nx + j)
+					- *(I1wyData + i * nx + j) * *(u2Data + i * nx + j) - *(I0Data+ +i * nx + j));
+			}
 
 		int n = 0;
 		float error = FLT_MAX;
@@ -110,42 +127,42 @@ void Dual_TVL1_optic_flow(
 			n++;
 			// estimate the values of the variable (v1, v2)
 			// (thresholding opterator TH)
-#pragma omp parallel for
-			for (int i = 0; i < size; i++)
-			{
-				const float rho = rho_c[i]
-					+ (I1wx[i] * u1[i] + I1wy[i] * u2[i]);
-
-				float d1, d2;
-
-				if (rho < -l_t * grad[i])
+			for (int i = 0; i < ny; i++)
+				for (int j = 0; j < nx; j++)
 				{
-					d1 = l_t * I1wx[i];
-					d2 = l_t * I1wy[i];
-				}
-				else
-				{
-					if (rho > l_t * grad[i])
+					const float rho = *(rho_cData + i * nx + j)
+						+ (*(I1wxData + i * nx + j) * *(u1Data + i * nx + j) + *(I1wyData + i * nx + j) * *(u2Data + i * nx + j));
+
+					float d1, d2;
+
+					if (rho < -l_t * *(gradData + i * nx + j))
 					{
-						d1 = -l_t * I1wx[i];
-						d2 = -l_t * I1wy[i];
+						d1 = l_t * *(I1wxData + i * nx + j);
+						d2 = l_t * *(I1wyData + i * nx + j);
 					}
 					else
 					{
-						if (grad[i] < GRAD_IS_ZERO)
-							d1 = d2 = 0;
+						if (rho > l_t * *(gradData + i * nx + j))
+						{
+							d1 = -l_t * *(I1wxData + i * nx + j);
+							d2 = -l_t * *(I1wyData + i * nx + j);
+						}
 						else
 						{
-							float fi = -rho / grad[i];
-							d1 = fi * I1wx[i];
-							d2 = fi * I1wy[i];
+							if (*(gradData + i * nx + j) < GRAD_IS_ZERO)
+								d1 = d2 = 0;
+							else
+							{
+								float fi = -rho / *(gradData + i * nx + j);
+								d1 = fi * *(I1wxData + i * nx + j);
+								d2 = fi * *(I1wyData + i * nx + j);
+							}
 						}
 					}
-				}
 
-				v1[i] = u1[i] + d1;
-				v2[i] = u2[i] + d2;
-			}
+					*(v1Data + i * nx + j) = *(u1Data + i * nx + j) + d1;
+					*(v2Data + i * nx + j) = *(u2Data + i * nx + j) + d2;
+				}
 
 			// compute the divergence of the dual variable (p1, p2)
 			divergence(p11, p12, div_p1, nx, ny);
@@ -153,68 +170,49 @@ void Dual_TVL1_optic_flow(
 
 			// estimate the values of the optical flow (u1, u2)
 			error = 0.0;
-#pragma omp parallel for reduction(+:error)
-			for (int i = 0; i < size; i++)
-			{
-				const float u1k = u1[i];
-				const float u2k = u2[i];
 
-				u1[i] = v1[i] + theta * div_p1[i];
-				u2[i] = v2[i] + theta * div_p2[i];
+			for (int i = 0; i < ny; i++)
+				for (int j = 0; j < nx; j++)
+				{
+					const float u1k = *(u1Data + i * nx + j);
+					const float u2k = *(u2Data + i * nx + j);
 
-				error += (u1[i] - u1k) * (u1[i] - u1k) +
-					(u2[i] - u2k) * (u2[i] - u2k);
-			}
-			error /= size;
+					*(u1Data + i * nx + j) = *(v1Data + i * nx + j) + theta * *(div_p1Data + i * nx + j);
+					*(u2Data + i * nx + j) = *(v2Data + i * nx + j) + theta * *(div_p2Data + i * nx + j);
+
+					error += (*(u1Data + i * nx + j) - u1k) * (*(u1Data + i * nx + j) - u1k) +
+						(*(u2Data + i * nx + j) - u2k) * (*(u2Data + i * nx + j) - u2k);
+				}
+			error /= nx * ny;
 
 			// compute the gradient of the optical flow (Du1, Du2)
 			forward_gradient(u1, u1x, u1y, nx, ny);
 			forward_gradient(u2, u2x, u2y, nx, ny);
 
 			// estimate the values of the dual variable (p1, p2)
-#pragma omp parallel for
-			for (int i = 0; i < size; i++)
-			{
-				const float taut = tau / theta;
-				const float g1 = hypot(u1x[i], u1y[i]);
-				const float g2 = hypot(u2x[i], u2y[i]);
-				const float ng1 = 1.0 + taut * g1;
-				const float ng2 = 1.0 + taut * g2;
 
-				p11[i] = (p11[i] + taut * u1x[i]) / ng1;
-				p12[i] = (p12[i] + taut * u1y[i]) / ng1;
-				p21[i] = (p21[i] + taut * u2x[i]) / ng2;
-				p22[i] = (p22[i] + taut * u2y[i]) / ng2;
-			}
+			for (int i = 0; i < ny; i++)
+				for (int j = 0; j < nx; j++)
+				{
+					const float taut = tau / theta;
+					const float g1 = hypot(*(u1xData + i * nx + j), *(u1yData + i * nx + j));
+					const float g2 = hypot(*(u2xData + i * nx + j), *(u2yData + i * nx + j));
+					const float ng1 = 1.0 + taut * g1;
+					const float ng2 = 1.0 + taut * g2;
+
+					*(p11Data + i * nx + j) = (*(p11Data + i * nx + j) + taut * *(u1xData + i * nx + j)) / ng1;
+					*(p12Data + i * nx + j) = (*(p12Data + i * nx + j) + taut * *(u1yData + i * nx + j)) / ng1;
+					*(p21Data + i * nx + j) = (*(p21Data + i * nx + j) + taut * *(u2xData + i * nx + j)) / ng2;
+					*(p22Data + i * nx + j) = (*(p22Data + i * nx + j) + taut * *(u2yData + i * nx + j)) / ng2;
+				}
 		}
 
 		if (verbose)
-			fprintf(stderr, "Warping: %d, "
-				"Iterations: %d, "
-				"Error: %f\n", warpings, n, error);
+			std::cout << stderr
+			<< "Warping: " << warpings
+			<< "Iterations: " << n
+			<< "Error: " << error << std::endl;
 	}
-
-	// delete allocated memory
-	free(I1x);
-	free(I1y);
-	free(I1w);
-	free(I1wx);
-	free(I1wy);
-	free(rho_c);
-	free(v1);
-	free(v2);
-	free(p11);
-	free(p12);
-	free(p21);
-	free(p22);
-	free(div);
-	free(grad);
-	free(div_p1);
-	free(div_p2);
-	free(u1x);
-	free(u1y);
-	free(u2x);
-	free(u2y);
 }
 
 /**
@@ -232,7 +230,7 @@ static void getminmax(
 
 	*min = *max = *(xData);
 	for (int i = 0; i < x.rows; i++)
-		for (int j = 0; i < x.cols; j++)
+		for (int j = 0; j < x.cols; j++)
 		{
 			if (*(xData + i * x.cols + j) < *min)
 				*min = *(xData + i * x.cols + j);
@@ -274,7 +272,7 @@ void image_normalization(
 	if (den > 0)
 		// normalize both images
 		for (int i = 0; i < I0.rows; i++)
-			for (int j = 0; i < I0.cols; j++)
+			for (int j = 0; j < I0.cols; j++)
 			{
 				*(I0nData + i * I0.cols + j) = 255.0 * (*(I0Data + i * I0.cols + j) - min) / den;
 				*(I1nData + i * I0.cols + j) = 255.0 * (*(I1Data + i * I0.cols + j) - min) / den;
@@ -282,7 +280,7 @@ void image_normalization(
 	else
 		// copy the original images
 		for (int i = 0; i < I0.rows; i++)
-			for (int j = 0; i < I0.cols; j++)
+			for (int j = 0; j < I0.cols; j++)
 			{
 				*(I0nData + i * I0.cols + j) = *(I0Data + i * I0.cols + j);
 				*(I1nData + i * I0.cols + j) = *(I1Data + i * I0.cols + j);
@@ -313,8 +311,10 @@ void Dual_TVL1_optic_flow_multiscale(
 )
 {
 	// allocate memory for the pyramid structure
+	//initalize the width of images, images and optical flow in pyramid
 	std::vector<int> nx(nscales), ny(nscales);
-	std::vector<cv::Mat> I0s(nscales), I1s(nscales), u1s(nscales), u2s(nscales);
+	std::vector<cv::Mat> I0s(nscales), I1s(nscales);
+	std::vector<cv::Mat> u1s(nscales), u2s(nscales);
 
 	u1s[0] = u1;
 	u2s[0] = u2;
@@ -334,28 +334,26 @@ void Dual_TVL1_optic_flow_multiscale(
 	for (int s = 1; s < nscales; s++)
 	{
 		zoom_size(nx[s - 1], ny[s - 1], &nx[s], &ny[s], zfactor);
-		const int sizes = nx[s] * ny[s];
-
-		// allocate memory
-		I0s[s] = (float*)malloc(sizes * sizeof(float));
-		I1s[s] = (float*)malloc(sizes * sizeof(float));
-		u1s[s] = (float*)malloc(sizes * sizeof(float));
-		u2s[s] = (float*)malloc(sizes * sizeof(float));
 
 		// zoom in the images to create the pyramidal structure
+		I0s[s] = cv::Mat::zeros(nx[s], ny[s], CV_32FC1);
+		I1s[s] = cv::Mat::zeros(nx[s], ny[s], CV_32FC1);
 		zoom_out(I0s[s - 1], I0s[s], nx[s - 1], ny[s - 1], zfactor);
 		zoom_out(I1s[s - 1], I1s[s], nx[s - 1], ny[s - 1], zfactor);
 	}
 
 	// initialize the flow at the coarsest scale
-	for (int i = 0; i < nx[nscales - 1] * ny[nscales - 1]; i++)
-		u1s[nscales - 1][i] = u2s[nscales - 1][i] = 0.0;
+	u1s[nscales - 1] = cv::Mat::zeros(nx[nscales - 1], ny[nscales - 1], CV_32FC1);
+	u2s[nscales - 1] = cv::Mat::zeros(nx[nscales - 1], ny[nscales - 1], CV_32FC1);
 
 	// pyramidal structure for computing the optical flow
 	for (int s = nscales - 1; s >= 0; s--)
 	{
 		if (verbose)
-			fprintf(stderr, "Scale %d: %dx%d\n", s, nx[s], ny[s]);
+			std::cout << stderr
+			<< "Scale: " << s
+			<< "Width: " << nx[s]
+			<< "Height: " << ny[s] << std::endl;
 
 		// compute the optical flow at the current scale
 		Dual_TVL1_optic_flow(
@@ -373,30 +371,15 @@ void Dual_TVL1_optic_flow_multiscale(
 		zoom_in(u2s[s], u2s[s - 1], nx[s], ny[s], nx[s - 1], ny[s - 1]);
 
 		// scale the optical flow with the appropriate zoom factor
-		for (int i = 0; i < nx[s - 1] * ny[s - 1]; i++)
-		{
-			u1s[s - 1][i] *= (float)1.0 / zfactor;
-			u2s[s - 1][i] *= (float)1.0 / zfactor;
-		}
+		float* u1sData = (float*)u1s[s - 1].data;
+		float* u2sData = (float*)u2s[s - 1].data;
+		for (int i = 0; i < ny[s - 1]; i++)
+			for (int j = 0; j < nx[s - 1]; j++)
+			{
+				*(u1sData + i * nx[s - 1] + j) *= (float)1.0 / zfactor;
+				*(u2sData + i * nx[s - 1] + j) *= (float)1.0 / zfactor;
+			}
 	}
-
-	// delete allocated memory
-	for (int i = 1; i < nscales; i++)
-	{
-		free(I0s[i]);
-		free(I1s[i]);
-		free(u1s[i]);
-		free(u2s[i]);
-	}
-	free(I0s[0]);
-	free(I1s[0]);
-
-	free(I0s);
-	free(I1s);
-	free(u1s);
-	free(u2s);
-	free(nx);
-	free(ny);
 }
 
 #endif // !TVL1FLOW_LIB_C

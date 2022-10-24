@@ -2,9 +2,8 @@
 #include <string>
 #include <opencv2/opencv.hpp>
 
-#include "bicubic_interpolation.h"
-#include "mask.h"
-#include "zoom.h"
+#include "flowshow.h"
+#include "tvl1flow_lib.h"
 
 #define PAR_DEFAULT_OUTFLOW "flow.flo"
 #define PAR_DEFAULT_NPROC   0
@@ -135,52 +134,65 @@ int main(int argc, char* argv[])
 	//zoom_out(fixed_image, moved_image, fixed_image.cols, fixed_image.rows, 0.5);
 	//zoom_in(fixed_image, moved_image, fixed_image.cols, fixed_image.rows, fixed_image.cols * 1.5, fixed_image.rows * 1.5);
 
-	//int nx, ny, nx2, ny2;
-	//nx = fixed_image.cols;
-	//ny = fixed_image.rows;
-	//nx2 = moved_image.cols;
-	//ny2 = moved_image.rows;
+	int nx, ny, nx2, ny2;
+	nx = fixed_image.cols;
+	ny = fixed_image.rows;
+	nx2 = moved_image.cols;
+	ny2 = moved_image.rows;
 
-	////read the images and compute the optical flow
-	//if (nx == nx2 && ny == ny2)
-	//{
-	//	//Set the number of scales according to the size of the
-	//	//images.  The value N is computed to assure that the smaller
-	//	//images of the pyramid don't have a size smaller than 16x16
-	//	const float N = 1 + log(hypot(nx, ny) / 16.0) / log(1 / zfactor);
-	//	if (N < nscales)
-	//		nscales = N;
+	//read the images and compute the optical flow
+	if (nx == nx2 && ny == ny2)
+	{
+		//Set the number of scales according to the size of the
+		//images.  The value N is computed to assure that the smaller
+		//images of the pyramid don't have a size smaller than 16x16
+		const float N = 1 + log(hypot(nx, ny) / 16.0) / log(1 / zfactor);
+		if (N < nscales)
+			nscales = N;
 
-	//	if (verbose) {
-	//		std::cout << "nproc = " << nproc
-	//			<< "tau = " << tau
-	//			<< "lambda = " << lambda
-	//			<< "theta = " << theta
-	//			<< "nscales = " << nscales
-	//			<< "zfactor = " << zfactor
-	//			<< "nwarps =  " << nwarps
-	//			<< "epsilon = " << epsilon << std::endl;
-	//	}
+		if (verbose) {
+			std::cout << "nproc = " << nproc
+				<< "tau = " << tau
+				<< "lambda = " << lambda
+				<< "theta = " << theta
+				<< "nscales = " << nscales
+				<< "zfactor = " << zfactor
+				<< "nwarps =  " << nwarps
+				<< "epsilon = " << epsilon << std::endl;
+		}
 
-	//	//allocate memory for the flow
-	//	cv::Mat I0 = fixed_image.clone();
-	//	cv::Mat I1 = moved_image.clone();
-	//	cv::Mat u1 = cv::Mat::zeros(fixed_image.size(), CV_32FC1);
-	//	cv::Mat u2 = cv::Mat::zeros(fixed_image.size(), CV_32FC1);
+		//allocate memory for the flow
+		cv::Mat I0 = fixed_image.clone();
+		cv::Mat I1 = moved_image.clone();
+		cv::Mat u1 = cv::Mat::zeros(fixed_image.size(), CV_32FC1);
+		cv::Mat u2 = cv::Mat::zeros(fixed_image.size(), CV_32FC1);
 
-	//	//compute the optical flow
-	//	Dual_TVL1_optic_flow_multiscale(
-	//		I0, I1, u1, u2, nx, ny, tau, lambda, theta,
-	//		nscales, zfactor, nwarps, epsilon, verbose
-	//	);
+		//compute the optical flow
+		Dual_TVL1_optic_flow_multiscale(
+			I0, I1, u1, u2, nx, ny, tau, lambda, theta,
+			nscales, zfactor, nwarps, epsilon, verbose
+		);
 
-	//	//save the optical flow
-	//	//iio_save_image_float_split(outfile, u, nx, ny, 2);
-	//}
-	//else {
-	//	std::cout << "ERROR: input images size mismatch " << std::endl;
-	//	return EXIT_FAILURE;
-	//}
+		//save the optical flow
+		//iio_save_image_float_split(outfile, u, nx, ny, 2);
 
+		// 光流场处理
+		std::vector<cv::Mat> optical_flow_merge;
+		optical_flow_merge.push_back(u1);
+		optical_flow_merge.push_back(u2);
+		cv::Mat optical_flow_field;
+		merge(optical_flow_merge, optical_flow_field);
+
+		cv::Mat florgb(optical_flow_field.size(), CV_8UC3);
+		flo2img(optical_flow_field, florgb);
+		cv::namedWindow("optical_flow", cv::WINDOW_NORMAL);
+		cv::imshow("optical_flow", florgb);
+	}
+	else {
+		std::cout << "ERROR: input images size mismatch " << std::endl;
+		return EXIT_FAILURE;
+	}
+
+	cv::waitKey();
 	return EXIT_FAILURE;
 }
