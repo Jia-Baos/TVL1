@@ -103,6 +103,8 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	verbose = 1;
+
 	// read the input images
 	std::string fixed_image_path = "E:\\Paper\\OpticalFlowData\\other-data\\Dimetrodon\\frame10.png";
 	std::string moved_image_path = "E:\\Paper\\OpticalFlowData\\other-data\\Dimetrodon\\frame11.png";
@@ -119,9 +121,8 @@ int main(int argc, char* argv[])
 	cv::Mat flow_x = cv::Mat::zeros(fixed_image.size(), CV_32FC1);
 	cv::Mat flow_y = cv::Mat::zeros(fixed_image.size(), CV_32FC1);
 
-	std::cout << fixed_image.channels() << "; " << moved_image.channels() << std::endl;
-	std::cout << fixed_image.cols << "; " << fixed_image.rows << std::endl;
-	std::cout << moved_image.cols << "; " << moved_image.rows << std::endl;
+	std::cout << fixed_image.channels() << fixed_image.cols << "; " << fixed_image.rows << std::endl;
+	std::cout << moved_image.channels() << moved_image.cols << "; " << moved_image.rows << std::endl;
 
 	/*---------------------------------------Test the basic functions---------------------------------------*/
 	//bicubic_interpolation_warp(fixed_image, flow_x, flow_y, moved_image, fixed_image.cols, fixed_image.rows, true);
@@ -152,20 +153,20 @@ int main(int argc, char* argv[])
 
 		if (verbose) {
 			std::cout << "nproc = " << nproc
-				<< "tau = " << tau
-				<< "lambda = " << lambda
-				<< "theta = " << theta
-				<< "nscales = " << nscales
-				<< "zfactor = " << zfactor
-				<< "nwarps =  " << nwarps
-				<< "epsilon = " << epsilon << std::endl;
+				<< "; tau = " << tau
+				<< "; lambda = " << lambda
+				<< "; theta = " << theta << std::endl;
+			std::cout << "nscales = " << nscales
+				<< "; zfactor = " << zfactor
+				<< "; nwarps =  " << nwarps
+				<< "; epsilon = " << epsilon << std::endl;
 		}
 
 		//allocate memory for the flow
 		cv::Mat I0 = fixed_image.clone();
 		cv::Mat I1 = moved_image.clone();
 		cv::Mat u1 = cv::Mat::zeros(fixed_image.size(), CV_32FC1);
-		cv::Mat u2 = cv::Mat::zeros(fixed_image.size(), CV_32FC1);
+		cv::Mat u2 = cv::Mat::zeros(moved_image.size(), CV_32FC1);
 
 		//compute the optical flow
 		Dual_TVL1_optic_flow_multiscale(
@@ -173,20 +174,30 @@ int main(int argc, char* argv[])
 			nscales, zfactor, nwarps, epsilon, verbose
 		);
 
+		// read the pixel value of optical flow
+		float* u1Data = (float*)u1.data;
+		const int step = u1.step[0] / u1.step[1];
+		for (int i = 0; i < u1.rows; i++)
+			for (int j = 0; j < u1.cols; j++)
+			{
+				const int p = step * i + u1.channels() * j;
+				std::cout << *(u1Data + p) << std::endl;
+			}
+
 		//save the optical flow
 		//iio_save_image_float_split(outfile, u, nx, ny, 2);
 
-		// 光流场处理
-		std::vector<cv::Mat> optical_flow_merge;
-		optical_flow_merge.push_back(u1);
-		optical_flow_merge.push_back(u2);
-		cv::Mat optical_flow_field;
-		merge(optical_flow_merge, optical_flow_field);
+		//// 光流场处理
+		//std::vector<cv::Mat> optical_flow_merge;
+		//optical_flow_merge.push_back(u1);
+		//optical_flow_merge.push_back(u2);
+		//cv::Mat optical_flow_field;
+		//merge(optical_flow_merge, optical_flow_field);
 
-		cv::Mat florgb(optical_flow_field.size(), CV_8UC3);
-		flo2img(optical_flow_field, florgb);
-		cv::namedWindow("optical_flow", cv::WINDOW_NORMAL);
-		cv::imshow("optical_flow", florgb);
+		//cv::Mat florgb(optical_flow_field.size(), CV_8UC3);
+		//flo2img(optical_flow_field, florgb);
+		//cv::namedWindow("optical_flow", cv::WINDOW_NORMAL);
+		//cv::imshow("optical_flow", florgb);
 	}
 	else {
 		std::cout << "ERROR: input images size mismatch " << std::endl;
