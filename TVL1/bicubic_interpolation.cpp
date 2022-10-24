@@ -245,6 +245,7 @@ void bicubic_interpolation_warp(
 	bool         border_out // if true, put zeros outside the region
 )
 {
+	output = cv::Mat::zeros(nx, ny, CV_32FC1);
 	for (int i = 0; i < ny; i++)
 	{
 		for (int j = 0; j < nx; j++)

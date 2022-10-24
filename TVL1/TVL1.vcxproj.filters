@@ -21,9 +21,33 @@
     <ClCompile Include="bicubic_interpolation.cpp">
       <Filter>头文件</Filter>
     </ClCompile>
+    <ClCompile Include="mask.cpp">
+      <Filter>头文件</Filter>
+    </ClCompile>
+    <ClCompile Include="tvl1flow_lib.cpp">
+      <Filter>头文件</Filter>
+    </ClCompile>
+    <ClCompile Include="zoom.cpp">
+      <Filter>头文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bicubic_interpolation.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="zoom.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="mask.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="tvl1flow_lib.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="flowshow.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="saveopticalflow.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
