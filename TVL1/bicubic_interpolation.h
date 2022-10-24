@@ -25,7 +25,7 @@ static double bicubic_interpolation_cell(
 );
 
 float bicubic_interpolation_at(
-	const float* input, //image to be interpolated
+	const cv::Mat input,//image to be interpolated
 	const float  uu,    //x component of the vector field
 	const float  vv,    //y component of the vector field
 	const int    nx,    //image width
@@ -34,10 +34,10 @@ float bicubic_interpolation_at(
 );
 
 void bicubic_interpolation_warp(
-	const float* input,     // image to be warped
-	const float* u,         // x component of the vector field
-	const float* v,         // y component of the vector field
-	float* output,    // image warped with bicubic interpolation
+	const cv::Mat input,	// image to be warped
+	const cv::Mat u,		// x component of the vector field
+	const cv::Mat v,		// y component of the vector field
+	cv::Mat& output,		// image warped with bicubic interpolation
 	const int    nx,        // image width
 	const int    ny,        // image height
 	bool         border_out // if true, put zeros outside the region

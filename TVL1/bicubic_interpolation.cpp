@@ -1,6 +1,9 @@
 #ifndef BICUBIC_INTERPOLATION_C
 #define BICUBIC_INTERPOLATION_C
 
+#include <iostream>
+#include <opencv2/opencv.hpp>
+
 #define BOUNDARY_CONDITION 0
 //0 Neumann
 //1 Periodic
@@ -125,16 +128,16 @@ static double bicubic_interpolation_cell(
   *
 **/
 float bicubic_interpolation_at(
-	const float* input, //image to be interpolated
-	const float  uu,    //x component of the vector field
+	const cv::Mat input,//image to be interpolated
+	const float	 uu,    //x component of the vector field
 	const float  vv,    //y component of the vector field
 	const int    nx,    //image width
 	const int    ny,    //image height
 	bool         border_out //if true, return zero outside the region
 )
 {
-	const int sx = (uu < 0) ? -1 : 1;
-	const int sy = (vv < 0) ? -1 : 1;
+	int sx = (uu < 0) ? -1 : 1;
+	int sy = (vv < 0) ? -1 : 1;
 
 	int x, y, mx, my, dx, dy, ddx, ddy;
 	bool out[1] = { false };
@@ -142,10 +145,11 @@ float bicubic_interpolation_at(
 	//apply the corresponding boundary conditions
 	switch (BOUNDARY_CONDITION) {
 
+		// int prosess deletes the decimal places direactly
 	case 0: x = neumann_bc((int)uu, nx, out);
 		y = neumann_bc((int)vv, ny, out);
 		mx = neumann_bc((int)uu - sx, nx, out);
-		my = neumann_bc((int)vv - sx, ny, out);
+		my = neumann_bc((int)vv - sy, ny, out);
 		dx = neumann_bc((int)uu + sx, nx, out);
 		dy = neumann_bc((int)vv + sy, ny, out);
 		ddx = neumann_bc((int)uu + 2 * sx, nx, out);
@@ -155,7 +159,7 @@ float bicubic_interpolation_at(
 	case 1: x = periodic_bc((int)uu, nx, out);
 		y = periodic_bc((int)vv, ny, out);
 		mx = periodic_bc((int)uu - sx, nx, out);
-		my = periodic_bc((int)vv - sx, ny, out);
+		my = periodic_bc((int)vv - sy, ny, out);
 		dx = periodic_bc((int)uu + sx, nx, out);
 		dy = periodic_bc((int)vv + sy, ny, out);
 		ddx = periodic_bc((int)uu + 2 * sx, nx, out);
@@ -165,7 +169,7 @@ float bicubic_interpolation_at(
 	case 2: x = symmetric_bc((int)uu, nx, out);
 		y = symmetric_bc((int)vv, ny, out);
 		mx = symmetric_bc((int)uu - sx, nx, out);
-		my = symmetric_bc((int)vv - sx, ny, out);
+		my = symmetric_bc((int)vv - sy, ny, out);
 		dx = symmetric_bc((int)uu + sx, nx, out);
 		dy = symmetric_bc((int)vv + sy, ny, out);
 		ddx = symmetric_bc((int)uu + 2 * sx, nx, out);
@@ -175,7 +179,7 @@ float bicubic_interpolation_at(
 	default:x = neumann_bc((int)uu, nx, out);
 		y = neumann_bc((int)vv, ny, out);
 		mx = neumann_bc((int)uu - sx, nx, out);
-		my = neumann_bc((int)vv - sx, ny, out);
+		my = neumann_bc((int)vv - sy, ny, out);
 		dx = neumann_bc((int)uu + sx, nx, out);
 		dy = neumann_bc((int)vv + sy, ny, out);
 		ddx = neumann_bc((int)uu + 2 * sx, nx, out);
@@ -188,26 +192,29 @@ float bicubic_interpolation_at(
 
 	else
 	{
+		float* inputData = (float*)input.data;
+
+		const int step = input.step[0] / input.step[1];
 		//obtain the interpolation points of the image
-		const float p11 = input[mx + nx * my];
-		const float p12 = input[x + nx * my];
-		const float p13 = input[dx + nx * my];
-		const float p14 = input[ddx + nx * my];
+		const float p11 = *(inputData + input.channels() * mx + step * my);
+		const float p12 = *(inputData + input.channels() * x + step * my);
+		const float p13 = *(inputData + input.channels() * dx + step * my);
+		const float p14 = *(inputData + input.channels() * ddx + step * my);
 
-		const float p21 = input[mx + nx * y];
-		const float p22 = input[x + nx * y];
-		const float p23 = input[dx + nx * y];
-		const float p24 = input[ddx + nx * y];
+		const float p21 = *(inputData + input.channels() * mx + step * y);
+		const float p22 = *(inputData + input.channels() * x + step * y);
+		const float p23 = *(inputData + input.channels() * dx + step * y);
+		const float p24 = *(inputData + input.channels() * ddx + step * y);
 
-		const float p31 = input[mx + nx * dy];
-		const float p32 = input[x + nx * dy];
-		const float p33 = input[dx + nx * dy];
-		const float p34 = input[ddx + nx * dy];
+		const float p31 = *(inputData + input.channels() * mx + step * dy);
+		const float p32 = *(inputData + input.channels() * x + step * dy);
+		const float p33 = *(inputData + input.channels() * dx + step * dy);
+		const float p34 = *(inputData + input.channels() * ddx + step * dy);
 
-		const float p41 = input[mx + nx * ddy];
-		const float p42 = input[x + nx * ddy];
-		const float p43 = input[dx + nx * ddy];
-		const float p44 = input[ddx + nx * ddy];
+		const float p41 = *(inputData + input.channels() * mx + step * ddy);
+		const float p42 = *(inputData + input.channels() * x + step * ddy);
+		const float p43 = *(inputData + input.channels() * dx + step * ddy);
+		const float p44 = *(inputData + input.channels() * ddx + step * ddy);
 
 		//create array
 		double pol[4][4] = {
@@ -229,27 +236,35 @@ float bicubic_interpolation_at(
   *
 **/
 void bicubic_interpolation_warp(
-	const float* input,     // image to be warped
-	const float* u,         // x component of the vector field
-	const float* v,         // y component of the vector field
-	float* output,			// image warped with bicubic interpolation
+	const cv::Mat input,	// image to be warped
+	const cv::Mat u,		// x component of the vector field
+	const cv::Mat v,		// y component of the vector field
+	cv::Mat& output,		// image warped with bicubic interpolation
 	const int    nx,        // image width
 	const int    ny,        // image height
 	bool         border_out // if true, put zeros outside the region
 )
 {
-#pragma omp parallel for
 	for (int i = 0; i < ny; i++)
+	{
 		for (int j = 0; j < nx; j++)
 		{
-			const int   p = i * nx + j;
-			const float uu = (float)(j + u[p]);
-			const float vv = (float)(i + v[p]);
+			float* uData = (float*)u.data;
+			float* vData = (float*)v.data;
+			float* outputData = (float*)output.data;
+
+			const int step = input.step[0] / input.step[1];
+			const int p = step * i + input.channels() * j;
+
+			// the remaped position of poxels
+			const float uu = (float)(j + *(uData + p));
+			const float vv = (float)(i + *(vData + p));
 
 			// obtain the bicubic interpolation at position (uu, vv)
-			output[p] = bicubic_interpolation_at(input,
+			*(outputData + p) = bicubic_interpolation_at(input,
 				uu, vv, nx, ny, border_out);
 		}
+	}
 }
 
 #endif // !BICUBIC_INTERPOLATION_C

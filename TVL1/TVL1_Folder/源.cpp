@@ -2,9 +2,8 @@
 #include <string>
 #include <opencv2/opencv.hpp>
 
-#include "bicubic_interpolation.h"
-//#include "tvl1flow_lib.h"
-//#include "saveopticalflow.h"
+#include "tvl1flow_lib.h"
+#include "saveopticalflow.h"
 
 #define PAR_DEFAULT_OUTFLOW "flow.flo"
 #define PAR_DEFAULT_NPROC   0
@@ -106,7 +105,7 @@ int main(int argc, char* argv[])
 
 	// read the input images
 	std::string fixed_image_path = "E:\\Paper\\OpticalFlowData\\other-data\\Dimetrodon\\frame10.png";
-	std::string moved_image_path = "E:\\Paper\\OpticalFlowData\\other-data\\Dimetrodon\\frame11.png";
+	std::string moved_image_path = "E:\\Paper\\OpticalFlowData\\other-data\\Dimetrodon\\frame10.png";
 
 	cv::Mat fixed_image = cv::imread(fixed_image_path);
 	cv::Mat moved_image = cv::imread(moved_image_path);
@@ -117,16 +116,60 @@ int main(int argc, char* argv[])
 	fixed_image.convertTo(fixed_image, CV_32FC1);
 	moved_image.convertTo(moved_image, CV_32FC1);
 
-	std::cout << fixed_image.channels() << "; " << moved_image.channels() << std::endl;
-	std::cout << fixed_image.cols << "; " << fixed_image.rows << std::endl;
-	std::cout << moved_image.cols << "; " << moved_image.rows << std::endl;
+	float* I0 = (float*)fixed_image.data;
+	float* I1 = (float*)moved_image.data;
 
-	// initialize optical flow
-	cv::Mat flow_x = cv::Mat::zeros(fixed_image.size(), CV_32FC1);
-	cv::Mat flow_y = cv::Mat::zeros(fixed_image.size(), CV_32FC1);
+	int nx, ny, nx2, ny2;
+	nx = fixed_image.cols;
+	ny = fixed_image.rows;
+	nx2 = moved_image.cols;
+	ny2 = moved_image.rows;
 
-	bicubic_interpolation_warp(fixed_image, flow_x, flow_y, moved_image,
-		fixed_image.cols, fixed_image.rows, true);
+	//read the images and compute the optical flow
+	if (nx == nx2 && ny == ny2)
+	{
+		//Set the number of scales according to the size of the
+		//images.  The value N is computed to assure that the smaller
+		//images of the pyramid don't have a size smaller than 16x16
+		const float N = 1 + log(hypot(nx, ny) / 16.0) / log(1 / zfactor);
+		if (N < nscales)
+			nscales = N;
+
+		if (verbose) {
+			std::cout << "nproc = " << nproc
+				<< "tau = " << tau
+				<< "lambda = " << lambda
+				<< "theta = " << theta
+				<< "nscales = " << nscales
+				<< "zfactor = " << zfactor
+				<< "nwarps =  " << nwarps
+				<< "epsilon = " << epsilon << std::endl;
+		}
+
+		//allocate memory for the flow
+		cv::Mat flow_x = cv::Mat::zeros(fixed_image.size(), CV_32FC1);
+		cv::Mat flow_y = cv::Mat::zeros(fixed_image.size(), CV_32FC1);
+		float* u1 = (float*)flow_x.data;
+		float* u2 = (float*)flow_y.data;
+
+		//compute the optical flow
+		Dual_TVL1_optic_flow_multiscale(
+			I0, I1, u1, u2, nx, ny, tau, lambda, theta,
+			nscales, zfactor, nwarps, epsilon, verbose
+		);
+
+		//save the optical flow
+		//iio_save_image_float_split(outfile, u, nx, ny, 2);
+
+		//delete allocated memory
+		free(I0);
+		free(I1);
+		free(u1);
+	}
+	else {
+		std::cout << "ERROR: input images size mismatch " << std::endl;
+		return EXIT_FAILURE;
+	}
 
 	return EXIT_FAILURE;
 }

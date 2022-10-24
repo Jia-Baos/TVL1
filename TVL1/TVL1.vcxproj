@@ -156,17 +156,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="bicubic_interpolation.cpp" />
-    <ClCompile Include="mask.cpp" />
-    <ClCompile Include="tvl1flow_lib.cpp" />
-    <ClCompile Include="zoom.cpp" />
     <ClCompile Include="源.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bicubic_interpolation.h" />
-    <ClInclude Include="mask.h" />
-    <ClInclude Include="saveopticalflow.h" />
-    <ClInclude Include="tvl1flow_lib.h" />
-    <ClInclude Include="zoom.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
