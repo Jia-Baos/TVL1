@@ -41,7 +41,7 @@ void divergence(
 	float* v1Data = (float*)v1.data;
 	float* v2Data = (float*)v2.data;
 	float* divData = (float*)div.data;
-	const int step = v1.step[0] / v1.step[1];
+	const int step = v1.step[0] / sizeof(v1Data[0]);
 
 	// compute the divergence on the central body of the image
 	for (int i = 1; i < ny - 1; i++)
@@ -100,8 +100,8 @@ void forward_gradient(
 )
 {
 	// intialize the pointer of images
-	fx = cv::Mat::zeros(nx, ny, CV_32FC1);
-	fy = cv::Mat::zeros(nx, ny, CV_32FC1);
+	fx = cv::Mat::zeros(ny, nx, CV_32FC1);
+	fy = cv::Mat::zeros(ny, nx, CV_32FC1);
 	float* fData = (float*)f.data;
 	float* fxData = (float*)fx.data;
 	float* fyData = (float*)fy.data;
@@ -157,8 +157,8 @@ void centered_gradient(
 )
 {
 	// intialize the pointer of images
-	dx = cv::Mat::zeros(nx, ny, CV_32FC1);
-	dy = cv::Mat::zeros(nx, ny, CV_32FC1);
+	dx = cv::Mat::zeros(ny, nx, CV_32FC1);
+	dy = cv::Mat::zeros(ny, nx, CV_32FC1);
 	float* inputData = (float*)input.data;
 	float* dxData = (float*)dx.data;
 	float* dyData = (float*)dy.data;
@@ -241,6 +241,7 @@ void gaussian(
 	}
 
 	// compute the coefficients of the 1D convolution kernel
+	// and it is the half of complete gaussian kernel
 	double* B = (double*)malloc(size * sizeof(double));
 	for (int i = 0; i < size; i++)
 		B[i] = 1 / (sigma * sqrt(2.0 * 3.1415926)) * exp(-i * i / den);
@@ -250,12 +251,13 @@ void gaussian(
 	for (int i = 0; i < size; i++)
 		norm += B[i];
 	norm *= 2;
+	// keep the size of gaussian kernel is odd
 	norm -= B[0];
 	for (int i = 0; i < size; i++)
 		B[i] /= norm;
 
 	// convolution of each line of the input image
-	double* R = (double*)malloc((size + xdim + size) * sizeof * R);
+	double* R = (double*)malloc((size + xdim + size) * sizeof(double));
 	
 	// intialize the pointer of images
 	float* IData = (float*)I.data;
@@ -276,7 +278,7 @@ void gaussian(
 		case BOUNDARY_CONDITION_REFLECTING:
 			for (i = 0, j = bdx; i < size; i++, j++) {
 				R[i] = *(IData + k * xdim + size - i);
-				R[j] = *(IData + k * xdim + xdim - i - 1);
+				R[j] = *(IData + k * xdim + xdim - 1 - i);
 			}
 			break;
 
@@ -298,7 +300,7 @@ void gaussian(
 	}
 
 	// convolution of each column of the input image
-	double* T = (double*)malloc((size + ydim + size) * sizeof * T);
+	double* T = (double*)malloc((size + ydim + size) * sizeof(double));
 
 	for (int k = 0; k < xdim; k++)
 	{

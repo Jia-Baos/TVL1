@@ -2,13 +2,17 @@
 #include <string>
 #include <opencv2/opencv.hpp>
 
+#include "bicubic_interpolation.h"
+#include "mask.h"
+#include "zoom.h"
+
 #include "flowshow.h"
 #include "tvl1flow_lib.h"
 
 #define PAR_DEFAULT_OUTFLOW "flow.flo"
 #define PAR_DEFAULT_NPROC   0
 #define PAR_DEFAULT_TAU     0.25
-#define PAR_DEFAULT_LAMBDA  0.15
+#define PAR_DEFAULT_LAMBDA  0.3
 #define PAR_DEFAULT_THETA   0.3
 #define PAR_DEFAULT_NSCALES 100
 #define PAR_DEFAULT_ZFACTOR 0.5
@@ -115,25 +119,33 @@ int main(int argc, char* argv[])
 	cv::cvtColor(fixed_image, fixed_image, cv::COLOR_BGR2GRAY);
 	cv::cvtColor(moved_image, moved_image, cv::COLOR_BGR2GRAY);
 
+	cv::namedWindow("fixed_image1", cv::WINDOW_NORMAL);
+	cv::imshow("fixed_image1", fixed_image);
+
 	fixed_image.convertTo(fixed_image, CV_32FC1);
 	moved_image.convertTo(moved_image, CV_32FC1);
 
 	cv::Mat flow_x = cv::Mat::zeros(fixed_image.size(), CV_32FC1);
 	cv::Mat flow_y = cv::Mat::zeros(fixed_image.size(), CV_32FC1);
 
-	std::cout << fixed_image.channels() << fixed_image.cols << "; " << fixed_image.rows << std::endl;
-	std::cout << moved_image.channels() << moved_image.cols << "; " << moved_image.rows << std::endl;
+	std::cout << fixed_image.channels() << "; " << fixed_image.cols << "; " << fixed_image.rows << std::endl;
+	std::cout << moved_image.channels() << "; " << moved_image.cols << "; " << moved_image.rows << std::endl;
 
 	/*---------------------------------------Test the basic functions---------------------------------------*/
 	//bicubic_interpolation_warp(fixed_image, flow_x, flow_y, moved_image, fixed_image.cols, fixed_image.rows, true);
 	//divergence(flow_x, flow_y, moved_image, fixed_image.cols, fixed_image.rows);
 	//forward_gradient(fixed_image, flow_x, flow_y, fixed_image.cols, fixed_image.rows);
 	//centered_gradient(fixed_image, flow_x, flow_y, fixed_image.cols, fixed_image.rows);
-	//gaussian(fixed_image, fixed_image.cols, fixed_image.rows, 10);
+	//gaussian(fixed_image, fixed_image.cols, fixed_image.rows, 2);
 	//int nxx, nyy;
 	//zoom_size(fixed_image.cols, fixed_image.rows, &nxx, &nyy, 0.5);
 	//zoom_out(fixed_image, moved_image, fixed_image.cols, fixed_image.rows, 0.5);
 	//zoom_in(fixed_image, moved_image, fixed_image.cols, fixed_image.rows, fixed_image.cols * 1.5, fixed_image.rows * 1.5);
+	//std::cout << fixed_image.cols << "; " << moved_image.cols << std::endl;
+	//std::cout << fixed_image.rows << "; " << moved_image.rows << std::endl;
+	//fixed_image.convertTo(fixed_image, CV_8UC1);
+	//cv::namedWindow("fixed_image2", cv::WINDOW_NORMAL);
+	//cv::imshow("fixed_image2", fixed_image);
 
 	int nx, ny, nx2, ny2;
 	nx = fixed_image.cols;
@@ -174,30 +186,28 @@ int main(int argc, char* argv[])
 			nscales, zfactor, nwarps, epsilon, verbose
 		);
 
-		// read the pixel value of optical flow
-		float* u1Data = (float*)u1.data;
-		const int step = u1.step[0] / u1.step[1];
-		for (int i = 0; i < u1.rows; i++)
-			for (int j = 0; j < u1.cols; j++)
-			{
-				const int p = step * i + u1.channels() * j;
-				std::cout << *(u1Data + p) << std::endl;
-			}
+		//// read the pixel value of optical flow
+		//float* u1Data = (float*)u1.data;
+		//const int step = u1.step[0] / u1.step[1];
+		//for (int i = 0; i < u1.rows; i++)
+		//	for (int j = 0; j < u1.cols; j++)
+		//	{
+		//		const int p = step * i + u1.channels() * j;
+		//		std::cout << *(u1Data + p) << std::endl;
+		//	}
 
-		//save the optical flow
-		//iio_save_image_float_split(outfile, u, nx, ny, 2);
+		// 光流场处理
+		std::vector<cv::Mat> optical_flow_merge;
+		optical_flow_merge.push_back(u1);
+		optical_flow_merge.push_back(u2);
+		cv::Mat optical_flow_field;
+		merge(optical_flow_merge, optical_flow_field);
 
-		//// 光流场处理
-		//std::vector<cv::Mat> optical_flow_merge;
-		//optical_flow_merge.push_back(u1);
-		//optical_flow_merge.push_back(u2);
-		//cv::Mat optical_flow_field;
-		//merge(optical_flow_merge, optical_flow_field);
-
-		//cv::Mat florgb(optical_flow_field.size(), CV_8UC3);
-		//flo2img(optical_flow_field, florgb);
-		//cv::namedWindow("optical_flow", cv::WINDOW_NORMAL);
-		//cv::imshow("optical_flow", florgb);
+		cv::Mat florgb(optical_flow_field.size(), CV_8UC3);
+		flo2img(optical_flow_field, florgb);
+		cv::namedWindow("optical_flow", cv::WINDOW_NORMAL);
+		cv::imshow("optical_flow", florgb);
+		cv::imwrite("Dimetrodon_optical_flow.png", florgb);
 	}
 	else {
 		std::cout << "ERROR: input images size mismatch " << std::endl;

@@ -51,26 +51,28 @@ void Dual_TVL1_optic_flow(
 	const float l_t = lambda * theta;
 
 	// initailize the matriex
-	cv::Mat I1x = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat I1y = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat I1w = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat I1wx = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat I1wy = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat rho_c = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat v1 = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat v2 = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat p11 = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat p12 = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat p21 = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat p22 = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat div = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat grad = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat div_p1 = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat div_p2 = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat u1x = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat u1y = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat u2x = cv::Mat::zeros(nx, ny, CV_32FC1);
-	cv::Mat u2y = cv::Mat::zeros(nx, ny, CV_32FC1);
+	cv::Mat I1x = cv::Mat::zeros(ny, nx, CV_32FC1);
+	cv::Mat I1y = cv::Mat::zeros(ny, nx, CV_32FC1);
+	cv::Mat I1w = cv::Mat::zeros(ny, nx, CV_32FC1);
+	cv::Mat I1wx = cv::Mat::zeros(ny, nx, CV_32FC1);
+	cv::Mat I1wy = cv::Mat::zeros(ny, nx, CV_32FC1);
+	cv::Mat grad = cv::Mat::zeros(ny, nx, CV_32FC1);
+	cv::Mat rho_c = cv::Mat::zeros(ny, nx, CV_32FC1);
+	cv::Mat v1 = cv::Mat::zeros(ny, nx, CV_32FC1);
+	cv::Mat v2 = cv::Mat::zeros(ny, nx, CV_32FC1);
+
+	cv::Mat p11 = cv::Mat::zeros(ny, nx, CV_32FC1);
+	cv::Mat p12 = cv::Mat::zeros(ny, nx, CV_32FC1);
+	cv::Mat p21 = cv::Mat::zeros(ny, nx, CV_32FC1);
+	cv::Mat p22 = cv::Mat::zeros(ny, nx, CV_32FC1);
+	cv::Mat div = cv::Mat::zeros(ny, nx, CV_32FC1);		//don't use
+	cv::Mat div_p1 = cv::Mat::zeros(ny, nx, CV_32FC1);
+	cv::Mat div_p2 = cv::Mat::zeros(ny, nx, CV_32FC1);
+
+	cv::Mat u1x = cv::Mat::zeros(ny, nx, CV_32FC1);
+	cv::Mat u1y = cv::Mat::zeros(ny, nx, CV_32FC1);
+	cv::Mat u2x = cv::Mat::zeros(ny, nx, CV_32FC1);
+	cv::Mat u2y = cv::Mat::zeros(ny, nx, CV_32FC1);
 
 	float* I0Data = (float*)I0.data;
 	float* u1Data = (float*)u1.data;
@@ -81,17 +83,20 @@ void Dual_TVL1_optic_flow(
 	float* I1wData = (float*)I1w.data;
 	float* I1wxData = (float*)I1wx.data;
 	float* I1wyData = (float*)I1wy.data;
+
+	float* gradData = (float*)grad.data;
 	float* rho_cData = (float*)rho_c.data;
 	float* v1Data = (float*)v1.data;
 	float* v2Data = (float*)v2.data;
+
 	float* p11Data = (float*)p11.data;
 	float* p12Data = (float*)p12.data;
 	float* p21Data = (float*)p21.data;
 	float* p22Data = (float*)p22.data;
 	float* divData = (float*)div.data;
-	float* gradData = (float*)grad.data;
 	float* div_p1Data = (float*)div_p1.data;
 	float* div_p2Data = (float*)div_p2.data;
+
 	float* u1xData = (float*)u1x.data;
 	float* u1yData = (float*)u1y.data;
 	float* u2xData = (float*)u2x.data;
@@ -115,7 +120,7 @@ void Dual_TVL1_optic_flow(
 				// store the |Grad(I1)|^2
 				*(gradData + i * nx + j) = (Ix2 + Iy2);
 
-				// compute the constant part of the rho function
+				// compute the constant part of the rho function, row(u)
 				*(rho_cData + i * nx + j) = (*(I1wData + i * nx + j) - *(I1wxData + i * nx + j) * *(u1Data + i * nx + j)
 					- *(I1wyData + i * nx + j) * *(u2Data + i * nx + j) - *(I0Data + +i * nx + j));
 			}
@@ -125,16 +130,18 @@ void Dual_TVL1_optic_flow(
 		while (error > epsilon * epsilon && n < MAX_ITERATIONS)
 		{
 			n++;
+			// fixed u, solve v
 			// estimate the values of the variable (v1, v2)
 			// (thresholding opterator TH)
 			for (int i = 0; i < ny; i++)
+			{
 				for (int j = 0; j < nx; j++)
 				{
+					// recover the original format of row(u)
 					const float rho = *(rho_cData + i * nx + j)
 						+ (*(I1wxData + i * nx + j) * *(u1Data + i * nx + j) + *(I1wyData + i * nx + j) * *(u2Data + i * nx + j));
 
 					float d1, d2;
-
 					if (rho < -l_t * *(gradData + i * nx + j))
 					{
 						d1 = l_t * *(I1wxData + i * nx + j);
@@ -163,7 +170,9 @@ void Dual_TVL1_optic_flow(
 					*(v1Data + i * nx + j) = *(u1Data + i * nx + j) + d1;
 					*(v2Data + i * nx + j) = *(u2Data + i * nx + j) + d2;
 				}
+			}
 
+			// fixed v, solve u
 			// compute the divergence of the dual variable (p1, p2)
 			divergence(p11, p12, div_p1, nx, ny);
 			divergence(p21, p22, div_p2, nx, ny);

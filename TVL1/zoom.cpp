@@ -54,16 +54,15 @@ void zoom_out(
 	gaussian(Is, nx, ny, sigma);
 
 	// re-sample the image using bicubic interpolation
-	Iout = cv::Mat::zeros(nxx, nyy, CV_32FC1);
+	Iout = cv::Mat::zeros(nyy, nxx, CV_32FC1);
+	float* IoutData = (float*)Iout.data;
 	for (int i1 = 0; i1 < nyy; i1++)
 		for (int j1 = 0; j1 < nxx; j1++)
 		{
 			const float i2 = (float)i1 / factor;
 			const float j2 = (float)j1 / factor;
 
-			float g = bicubic_interpolation_at(Is, j2, i2, nx, ny, false);
-			
-			float* IoutData = (float*)Iout.data;
+			float g = bicubic_interpolation_at(Is, j2, i2, nx, ny, true);
 			*(IoutData + i1 * nxx + j1) = g;
 		}
 }
@@ -86,13 +85,13 @@ void zoom_in(
 	// temporary working image
 	cv::Mat Is = I.clone();
 
-	// intialize the temp varible of Iout, otherwise the memory maybe malloc wrongly
-	Iout = cv::Mat::zeros(nxx, nyy, CV_32FC1);
-	float* IoutData = (float*)Iout.data;
-
 	// compute the zoom factor
 	const float factorx = ((float)nxx / nx);
 	const float factory = ((float)nyy / ny);
+
+	// intialize the temp varible of Iout, otherwise the memory maybe malloc wrongly
+	Iout = cv::Mat::zeros(nyy, nxx, CV_32FC1);
+	float* IoutData = (float*)Iout.data;
 
 	// re-sample the image using bicubic interpolation
 	for (int i1 = 0; i1 < nyy; i1++)
@@ -101,7 +100,7 @@ void zoom_in(
 			float i2 = (float)i1 / factory;
 			float j2 = (float)j1 / factorx;
 
-			float g = bicubic_interpolation_at(Is, j2, i2, nx, ny, false);
+			float g = bicubic_interpolation_at(Is, j2, i2, nx, ny, true);
 			*(IoutData + i1 * nxx + j1) = g;
 		}
 }

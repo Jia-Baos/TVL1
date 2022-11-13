@@ -114,11 +114,11 @@ static double bicubic_interpolation_cell(
 )
 {
 	double v[4];
-	v[0] = cubic_interpolation_cell(p[0], y);
-	v[1] = cubic_interpolation_cell(p[1], y);
-	v[2] = cubic_interpolation_cell(p[2], y);
-	v[3] = cubic_interpolation_cell(p[3], y);
-	return cubic_interpolation_cell(v, x);
+	v[0] = cubic_interpolation_cell(p[0], x);
+	v[1] = cubic_interpolation_cell(p[1], x);
+	v[2] = cubic_interpolation_cell(p[2], x);
+	v[3] = cubic_interpolation_cell(p[3], x);
+	return cubic_interpolation_cell(v, y);
 }
 
 /**
@@ -194,7 +194,8 @@ float bicubic_interpolation_at(
 	{
 		float* inputData = (float*)input.data;
 
-		const int step = input.step[0] / input.step[1];
+		const int step = input.step[0] / sizeof(inputData[0]);
+
 		//obtain the interpolation points of the image
 		const float p11 = *(inputData + input.channels() * mx + step * my);
 		const float p12 = *(inputData + input.channels() * x + step * my);
@@ -218,10 +219,10 @@ float bicubic_interpolation_at(
 
 		//create array
 		double pol[4][4] = {
-			{p11, p21, p31, p41},
-			{p12, p22, p32, p42},
-			{p13, p23, p33, p43},
-			{p14, p24, p34, p44}
+			{p11, p12, p13, p14},
+			{p21, p22, p23, p24},
+			{p31, p32, p33, p34},
+			{p41, p42, p43, p44}
 		};
 
 		//return interpolation
@@ -245,16 +246,17 @@ void bicubic_interpolation_warp(
 	bool         border_out // if true, put zeros outside the region
 )
 {
-	output = cv::Mat::zeros(nx, ny, CV_32FC1);
+	output = cv::Mat::zeros(input.size(), CV_32FC1);
+	float* uData = (float*)u.data;
+	float* vData = (float*)v.data;
+	float* outputData = (float*)output.data;
+
+	const int step = input.step[0] / sizeof(outputData[0]);
+
 	for (int i = 0; i < ny; i++)
 	{
 		for (int j = 0; j < nx; j++)
 		{
-			float* uData = (float*)u.data;
-			float* vData = (float*)v.data;
-			float* outputData = (float*)output.data;
-
-			const int step = input.step[0] / input.step[1];
 			const int p = step * i + input.channels() * j;
 
 			// the remaped position of poxels
