@@ -209,6 +209,7 @@ int main(int argc, char* argv[])
 		//cv::imwrite("Dimetrodon_optical_flow.png", flowrgb);
 
 		std::vector<cv::Mat> flow_spilit;
+
 		cv::split(optical_flow_field, flow_spilit);
 
 		// 通过后面一帧重建前面一帧
