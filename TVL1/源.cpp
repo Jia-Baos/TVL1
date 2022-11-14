@@ -219,6 +219,8 @@ int main(int argc, char* argv[])
 
 		cv::namedWindow("result", cv::WINDOW_NORMAL);
 		cv::imshow("result", result);
+		cv::namedWindow("Res1", cv::WINDOW_NORMAL);
+		cv::imshow("Res1", abs(moved_image - fixed_image));
 		cv::namedWindow("Res2", cv::WINDOW_NORMAL);
 		cv::imshow("Res2", abs(result - fixed_image));
 	}
