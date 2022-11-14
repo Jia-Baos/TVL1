@@ -30,6 +30,9 @@
     <ClCompile Include="tvl1flow_lib.cpp">
       <Filter>头文件</Filter>
     </ClCompile>
+    <ClCompile Include="Myutils.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bicubic_interpolation.h">
@@ -45,6 +48,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="tvl1flow_lib.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Myutils.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

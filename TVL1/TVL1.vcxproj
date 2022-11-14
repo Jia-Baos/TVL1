@@ -157,6 +157,7 @@
   <ItemGroup>
     <ClCompile Include="bicubic_interpolation.cpp" />
     <ClCompile Include="mask.cpp" />
+    <ClCompile Include="Myutils.cpp" />
     <ClCompile Include="tvl1flow_lib.cpp" />
     <ClCompile Include="zoom.cpp" />
     <ClCompile Include="源.cpp" />
@@ -165,6 +166,7 @@
     <ClInclude Include="bicubic_interpolation.h" />
     <ClInclude Include="flowshow.h" />
     <ClInclude Include="mask.h" />
+    <ClInclude Include="Myutils.h" />
     <ClInclude Include="tvl1flow_lib.h" />
     <ClInclude Include="zoom.h" />
   </ItemGroup>

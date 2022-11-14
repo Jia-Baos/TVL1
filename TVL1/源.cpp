@@ -6,6 +6,7 @@
 #include "mask.h"
 #include "zoom.h"
 
+#include "Myutils.h"
 #include "flowshow.h"
 #include "tvl1flow_lib.h"
 
@@ -14,7 +15,7 @@
 #define PAR_DEFAULT_TAU     0.25
 #define PAR_DEFAULT_LAMBDA  0.3
 #define PAR_DEFAULT_THETA   0.3
-#define PAR_DEFAULT_NSCALES 100
+#define PAR_DEFAULT_NSCALES 5
 #define PAR_DEFAULT_ZFACTOR 0.5
 #define PAR_DEFAULT_NWARPS  5
 #define PAR_DEFAULT_EPSILON 0.01
@@ -115,15 +116,13 @@ int main(int argc, char* argv[])
 
 	cv::Mat fixed_image = cv::imread(fixed_image_path);
 	cv::Mat moved_image = cv::imread(moved_image_path);
-
+	
 	cv::cvtColor(fixed_image, fixed_image, cv::COLOR_BGR2GRAY);
 	cv::cvtColor(moved_image, moved_image, cv::COLOR_BGR2GRAY);
 
-	cv::namedWindow("fixed_image1", cv::WINDOW_NORMAL);
-	cv::imshow("fixed_image1", fixed_image);
-
-	fixed_image.convertTo(fixed_image, CV_32FC1);
-	moved_image.convertTo(moved_image, CV_32FC1);
+	cv::Mat fixed_image_32FC1, moved_image_32FC1;
+	fixed_image.convertTo(fixed_image_32FC1, CV_32FC1);
+	moved_image.convertTo(moved_image_32FC1, CV_32FC1);
 
 	cv::Mat flow_x = cv::Mat::zeros(fixed_image.size(), CV_32FC1);
 	cv::Mat flow_y = cv::Mat::zeros(fixed_image.size(), CV_32FC1);
@@ -175,8 +174,8 @@ int main(int argc, char* argv[])
 		}
 
 		//allocate memory for the flow
-		cv::Mat I0 = fixed_image.clone();
-		cv::Mat I1 = moved_image.clone();
+		cv::Mat I0 = fixed_image_32FC1.clone();
+		cv::Mat I1 = moved_image_32FC1.clone();
 		cv::Mat u1 = cv::Mat::zeros(fixed_image.size(), CV_32FC1);
 		cv::Mat u2 = cv::Mat::zeros(moved_image.size(), CV_32FC1);
 
@@ -203,11 +202,24 @@ int main(int argc, char* argv[])
 		cv::Mat optical_flow_field;
 		merge(optical_flow_merge, optical_flow_field);
 
-		cv::Mat florgb(optical_flow_field.size(), CV_8UC3);
-		flo2img(optical_flow_field, florgb);
+		cv::Mat flowrgb(optical_flow_field.size(), CV_8UC3);
+		flo2img(optical_flow_field, flowrgb);
 		cv::namedWindow("optical_flow", cv::WINDOW_NORMAL);
-		cv::imshow("optical_flow", florgb);
-		cv::imwrite("Dimetrodon_optical_flow.png", florgb);
+		cv::imshow("optical_flow", flowrgb);
+		//cv::imwrite("Dimetrodon_optical_flow.png", flowrgb);
+
+		std::vector<cv::Mat> flow_spilit;
+		cv::split(optical_flow_field, flow_spilit);
+
+		// 通过后面一帧重建前面一帧
+		cv::Mat result;
+		//movepixels_2d2(moved_image, result, flow_spilit[0], flow_spilit[1], cv::INTER_CUBIC);
+		movepixels_2d2(moved_image, result, u1, u2, cv::INTER_CUBIC);
+
+		cv::namedWindow("result", cv::WINDOW_NORMAL);
+		cv::imshow("result", result);
+		cv::namedWindow("Res2", cv::WINDOW_NORMAL);
+		cv::imshow("Res2", abs(result - fixed_image));
 	}
 	else {
 		std::cout << "ERROR: input images size mismatch " << std::endl;
